@@ -1,3 +1,4 @@
+require "activerecord"
 require "logger"
 
 module Integral
@@ -7,7 +8,8 @@ module Integral
     end
     
     def self.connect
-      args = Integral::Configuration.database_configuration[ENV["INTEGRAL_ENV"]]
+      disable_logging
+      args = Integral::Configuration.database_configuration["development"]
       ActiveRecord::Base.establish_connection(args)
     end
   end
@@ -17,4 +19,10 @@ end
 # separate models directory. This isn't Rails, after all!
 
 class Application < ActiveRecord::Base
+end
+
+class TestRun < ActiveRecord::Base
+end
+
+class ApplicationTestRun < ActiveRecord::Base
 end
