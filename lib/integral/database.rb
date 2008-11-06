@@ -19,6 +19,15 @@ end
 # separate models directory. This isn't Rails, after all!
 
 class Application < ActiveRecord::Base
+  validates_uniqueness_of :name
+  
+  def activate!
+    update_attribute(:active, true)
+  end
+  
+  def deactivate!
+    update_attribute(:active, false)
+  end
 end
 
 class TestRun < ActiveRecord::Base

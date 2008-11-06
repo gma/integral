@@ -1,4 +1,5 @@
 ._*
 .DS_Store
 pkg
+config/config.yml
 config/database.yml
