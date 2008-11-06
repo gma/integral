@@ -1,0 +1,35 @@
+<% 
+def get_mysql_password
+  script =<<EOF
+import ConfigParser
+parser = ConfigParser.SafeConfigParser()
+parser.read("#{ENV['HOME']}/.my.cnf")
+print parser.get("mysql", "password")
+EOF
+  %x(python -c '#{script}')
+end
+%>
+
+mysql: &mysql
+  adapter: mysql
+  username: root
+  password: <%= get_mysql_password %>
+  host: localhost
+  socket: <%= [
+    '/var/lib/mysql/mysql.sock',
+    '/var/run/mysqld/mysqld.sock',
+    '/tmp/mysqld.sock',
+    '/tmp/mysql.sock'
+  ].detect { |socket| File.exist?(socket) } %>
+
+development:
+  database: integral_development
+  <<: *mysql
+  
+test: &test
+  database: integral_test
+  <<: *mysql
+
+production:
+  database: integral_production
+  <<: *mysql
