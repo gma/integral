@@ -19,19 +19,37 @@ end
 # separate models directory. This isn't Rails, after all!
 
 class Application < ActiveRecord::Base
+  has_many :application_test_runs, :dependent => :destroy
+  has_many :test_runs, :through => :application_test_runs
+
   validates_uniqueness_of :name
-  
+
+  def self.find_active
+    find(:all, :conditions => ["active = ?", true])
+  end
+
   def activate!
     update_attribute(:active, true)
   end
-  
+
   def deactivate!
     update_attribute(:active, false)
   end
 end
 
-class TestRun < ActiveRecord::Base
+class ApplicationTestRun < ActiveRecord::Base
+  belongs_to :applications
+  belongs_to :test_runs
 end
 
-class ApplicationTestRun < ActiveRecord::Base
+class TestRun < ActiveRecord::Base
+  has_many :application_test_runs, :dependent => :destroy
+  has_many :applications, :through => :application_test_runs
+
+  def self.start(command)
+    exit_status = `#{command}`
+    run = new
+    run.applications << ::Application.find_active
+    run.save!
+  end
 end

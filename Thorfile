@@ -57,13 +57,15 @@ module Integral
     
     desc "activate <name>", "activate an existing application"
     def activate(name)
-      Application.find_by_name(name).activate!
+      app = Application.find_by_name(name)
+      app && app.activate!
       list
     end
     
     desc "deactivate <name>", "deactivate an active application "
     def deactivate(name)
-      Application.find_by_name(name).deactivate!
+      app = Application.find_by_name(name)
+      app && app.deactivate!
       list
     end
   end
@@ -71,6 +73,10 @@ module Integral
   class Test < Thor
     desc "run", "run the integration tests"
     def run
+      puts "Running tests here..."
+      exit_status = 0  # should be exit status of an external script
+      exit_status == 0 ? true : false
+      TestRun.start("ruby integration.rb #{Integral::Configuration.test_server}")
     end
     
     desc "latest", "show the results of the last 5 test runs"
