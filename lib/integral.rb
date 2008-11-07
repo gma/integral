@@ -3,7 +3,7 @@ $:.unshift(File.dirname(__FILE__)) unless
 
 INTEGRAL_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
 
-require "rubygems"  # needed for loading gems whilst doing local development
+require "rubygems"
 
 require "integral/configuration"
 require "integral/database"
