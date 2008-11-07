@@ -19,8 +19,7 @@ end
 # separate models directory. This isn't Rails, after all!
 
 class Application < ActiveRecord::Base
-  has_many :application_test_runs, :dependent => :destroy
-  has_many :test_runs, :through => :application_test_runs
+  has_many :application_versions, :dependent => :destroy
 
   validates_uniqueness_of :name
   validates_presence_of :name, :path
@@ -40,18 +39,36 @@ class Application < ActiveRecord::Base
   def deactivate!
     update_attribute(:active, false)
   end
+  
+  def current_version
+    ApplicationVersion.create(
+        :application => self, :version => cat_revision_file)
+  end
+  
+  private
+    def cat_revision_file
+      puts "mock out cat_revision_file"
+    end
 end
 
-class ApplicationTestRun < ActiveRecord::Base
+class ApplicationVersion < ActiveRecord::Base
   belongs_to :application
+  has_many :application_version_test_runs
+  has_many :test_runs, :through => :application_version_test_runs
+end
+
+class ApplicationVersionTestRun < ActiveRecord::Base
+  belongs_to :application_version
   belongs_to :test_run
 end
 
 class TestRun < ActiveRecord::Base
-  has_many :application_test_runs, :dependent => :destroy
-  has_many :applications, :through => :application_test_runs
+  has_many :application_version_test_runs
+  has_many :application_versions, :through => :application_version_test_runs
   
-  def start
-    applications << Application.find_active
+  def self.start(command)
+    run = TestRun.new
+    run.application_versions << ApplicationVersion.find_active
+    run.save
   end
 end

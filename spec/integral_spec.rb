@@ -1,6 +1,13 @@
 require File.dirname(__FILE__) + '/spec_helper.rb'
 
 module Helpers
+  def destroy_all
+    Application.destroy_all
+    ApplicationVersion.destroy_all
+    ApplicationVersionTestRun.destroy_all
+    TestRun.destroy_all
+  end
+  
   def valid_app_params
     { :name => "foo", :path => "/var/apps/foo/current" }
   end
@@ -14,13 +21,19 @@ module Helpers
     app.save
     app
   end
+  
+  def stub_version_check
+    Application.find(:all).each do |app|
+      app.stub!(:cat_revision_file).and_return("123")
+    end
+  end
 end
 
 describe Application do
   include Helpers
   
   before(:each) do
-    Application.destroy_all
+    destroy_all
   end
   
   it "should have a name" do
@@ -54,34 +67,49 @@ describe Application do
     app.should_not be_active
   end
   
-  it "should find all active applications" do
-    2.times { |i| Application.create(valid_app_params.merge(:name => "App #{i}")) }
-    Application.find(:first).deactivate!
-    Application.find_active.size.should == 1
+  it "should be able to calculate the current version" do
+    app = create_application
+    app.stub!(:cat_revision_file).and_return("123")
+    version = app.current_version
+    version.should == ApplicationVersion.find_by_application_id_and_version(
+        app.id, "123")
   end
-  
 end
 
 describe TestRun do
   include Helpers
   
   before(:each) do
-    Application.destroy_all
-    TestRun.destroy_all
+    destroy_all
+  end
+  
+  def successful_command
+    "true"
+  end
+  
+  def unsuccessful_command
+    "false"
   end
   
   it "should assign applications to the test run" do
+    pending
     app = create_application
-    run = TestRun.new
-    run.start
-    run.applications.should include(app)
+    TestRun.start(successful_command)
+    TestRun.find(:first).applications.should include(app)
   end
   
   it "should not assign inactive apps to the test run" do
+    pending
     active = create_application(:name => "Active")
     inactive = create_application(:name => "Inactive", :active => false)
-    run = TestRun.new
-    run.start
-    run.applications.should_not include(inactive)
+    TestRun.start(successful_command)
+    TestRun.find(:first).applications.should_not include(inactive)
+  end
+  
+  it "should record successful test run" do
+    pending
+    create_application
+    TestRun.start(successful_command)
+    
   end
 end
