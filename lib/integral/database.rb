@@ -43,8 +43,8 @@ class Application < ActiveRecord::Base
 end
 
 class ApplicationTestRun < ActiveRecord::Base
-  belongs_to :applications
-  belongs_to :test_runs
+  belongs_to :application
+  belongs_to :test_run
 end
 
 class TestRun < ActiveRecord::Base
