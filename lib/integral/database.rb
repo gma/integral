@@ -9,7 +9,7 @@ module Integral
     
     def self.connect
       disable_logging
-      args = Integral::Configuration.database_configuration["development"]
+      args = Integral::Configuration.database_configuration[INTEGRAL_ENV]
       ActiveRecord::Base.establish_connection(args)
     end
   end
@@ -23,9 +23,14 @@ class Application < ActiveRecord::Base
   has_many :test_runs, :through => :application_test_runs
 
   validates_uniqueness_of :name
+  validates_presence_of :name, :path
 
   def self.find_active
     find(:all, :conditions => ["active = ?", true])
+  end
+  
+  def active?
+    self.active
   end
 
   def activate!
