@@ -50,11 +50,8 @@ end
 class TestRun < ActiveRecord::Base
   has_many :application_test_runs, :dependent => :destroy
   has_many :applications, :through => :application_test_runs
-
-  def self.start(command)
-    exit_status = `#{command}`
-    run = new
-    run.applications << ::Application.find_active
-    run.save!
+  
+  def start
+    applications << Application.find_active
   end
 end
