@@ -22,10 +22,19 @@ module Helpers
     app
   end
   
-  def stub_version_check
-    Application.find(:all).each do |app|
-      app.stub!(:cat_revision_file).and_return("123")
-    end
+  def create_version(app, version = "1")
+    version = ApplicationVersion.new(:application => app, :version => version)
+    version.save!
+    version
+  end
+  
+  def stub_version_check(path)
+    fh = mock(:fh)
+    fh.stub!(:gets).and_return("123\n\n")
+    Integral::Configuration.stub!(:version_command).and_return(
+        "ssh $hostname cat $path/REVISION")
+    Integral::Configuration.stub!(:server).and_return("testhost")
+    IO.stub!(:popen).with("ssh testhost cat #{path}/REVISION").and_return(fh)
   end
 end
 
@@ -53,7 +62,7 @@ describe Application do
   end
   
   it "should require application names to be unique" do
-    2.times { Application.create(valid_app_params) }
+    2.times { create_application }
     Application.find_all_by_name(valid_app_params[:name]).size.should == 1
   end
   
@@ -68,11 +77,51 @@ describe Application do
   end
   
   it "should be able to calculate the current version" do
+    Integral::Configuration.should_receive("version_command").
+        and_return("ssh $hostname cat $path/REVISION")
     app = create_application
-    app.stub!(:cat_revision_file).and_return("123")
-    version = app.current_version
-    version.should == ApplicationVersion.find_by_application_id_and_version(
-        app.id, "123")
+    stub_version_check(app.path)
+    IO.should_receive(:popen).with("ssh testhost cat #{app.path}/REVISION")
+
+    app.current_version(:test).should == "123"
+  end
+end
+
+describe ApplicationVersion do
+  include Helpers
+  
+  before(:each) do
+    destroy_all
+  end
+  
+  it "should create new version object for active applications" do
+    app = create_application
+    stub_version_check(app.path)
+    ApplicationVersion.check_current_versions(:test)
+    version = ApplicationVersion.find_by_application_id_and_version(app, "123")
+    version.should_not be_nil
+  end
+  
+  it "should not create duplicate versions for an application" do
+    app = create_application
+    stub_version_check(app.path)
+    2.times { ApplicationVersion.check_current_versions(:test) }
+    ApplicationVersion.find_all_by_application_id(app).size.should == 1
+  end
+  
+  it "should not retrieve current version of inactive applications" do
+    app = create_application(:active => false)
+    IO.should_not_receive(:popen)
+    ApplicationVersion.check_current_versions(:test)
+  end
+  
+  it "should return only the current version of each application" do
+    app1 = create_application(:name => "App1")
+    app2 = create_application(:name => "App2")
+    v1 = create_version(app1, "1")
+    v2 = create_version(app1, "2")
+    v3 = create_version(app2, "2")
+    ApplicationVersion.find_current.should == [v2, v3]
   end
 end
 

@@ -17,14 +17,13 @@ module Integral
     def self.database_configuration
       YAML::load(ERB.new(IO.read(database_configuration_file)).result)
     end
-    
-    def self.test_server
-      puts configuration.inspect
-      configuration["servers"]["test"]
-    end
 
-    def self.live_server
-      configuration["servers"]["live"]
+    def self.server(type)
+      configuration["servers"][type.to_s]
+    end
+    
+    def self.version_command
+      configuration["version_command"]
     end
   end
 end

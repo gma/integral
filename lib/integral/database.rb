@@ -40,21 +40,30 @@ class Application < ActiveRecord::Base
     update_attribute(:active, false)
   end
   
-  def current_version
-    ApplicationVersion.create(
-        :application => self, :version => cat_revision_file)
+  def current_version(type)
+    command = Integral::Configuration.version_command.
+        gsub("$hostname", Integral::Configuration.server(type)).
+        gsub("$path", self.path)
+    fh = IO.popen(command)
+    fh.gets.rstrip
   end
-  
-  private
-    def cat_revision_file
-      puts "mock out cat_revision_file"
-    end
 end
 
 class ApplicationVersion < ActiveRecord::Base
   belongs_to :application
   has_many :application_version_test_runs
   has_many :test_runs, :through => :application_version_test_runs
+  
+  def self.find_current
+    find(:all, :group => :application_id, :order => "updated_at")
+  end
+  
+  def self.check_current_versions(type)
+    Application.find(:all, :conditions => ["active = ?", true]).each do |app|
+      find_or_create_by_application_id_and_version(
+          :application => app, :version => app.current_version(type))
+    end
+  end
 end
 
 class ApplicationVersionTestRun < ActiveRecord::Base
@@ -65,10 +74,4 @@ end
 class TestRun < ActiveRecord::Base
   has_many :application_version_test_runs
   has_many :application_versions, :through => :application_version_test_runs
-  
-  def self.start(command)
-    run = TestRun.new
-    run.application_versions << ApplicationVersion.find_active
-    run.save
-  end
 end

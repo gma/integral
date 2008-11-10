@@ -73,7 +73,7 @@ class Integration < Thor
     puts "Running tests here..."
     exit_status = 0  # should be exit status of an external script
     exit_status == 0 ? true : false
-    TestRun.start("ruby integration.rb #{Integral::Configuration.test_server}")
+    TestRun.start("ruby integration.rb #{Integral::Configuration.server(:test)}")
   end
   
   desc "latest", "show the results of the last 5 test runs"

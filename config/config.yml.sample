@@ -1,3 +1,5 @@
 servers:
   test: staging.mydomain
   live: live.mydomain
+
+version_command: ssh $hostname cat $path/REVISION
