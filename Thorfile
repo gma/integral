@@ -80,3 +80,25 @@ class Integration < Thor
   def latest
   end
 end
+
+class Versions < Thor
+  desc "test", "show current versions on test server"
+  def test
+    _check_server(:test)
+  end
+  
+  desc "live", "show current versions on live server"
+  def live
+    _check_server(:live)
+  end
+  
+  def _check_server(type)
+    versions = ApplicationVersion.check_current_versions(type)
+    versions.sort! { |a, b| a.application.name <=> b.application.name }
+    puts sprintf("%-15s %s", "Application", "Version")
+    puts "-" * 78
+    versions.each do |version|
+      puts sprintf("%-15s %s", version.application.name, version.version)
+    end
+  end
+end

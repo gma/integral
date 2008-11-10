@@ -59,10 +59,12 @@ class ApplicationVersion < ActiveRecord::Base
   end
   
   def self.check_current_versions(type)
+    versions = []
     Application.find(:all, :conditions => ["active = ?", true]).each do |app|
-      find_or_create_by_application_id_and_version(
+      versions << find_or_create_by_application_id_and_version(
           :application => app, :version => app.current_version(type))
     end
+    versions
   end
 end
 
