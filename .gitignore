@@ -3,3 +3,4 @@
 pkg
 config/config.yml
 config/database.yml
+db/*sqlite3
