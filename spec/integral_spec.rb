@@ -132,33 +132,17 @@ describe TestRun do
     destroy_all
   end
   
-  def successful_command
-    "true"
-  end
-  
-  def unsuccessful_command
-    "false"
-  end
-  
-  it "should assign applications to the test run" do
-    pending
+  it "should assign current version of apps to test run" do
     app = create_application
-    TestRun.start(successful_command)
-    TestRun.find(:first).applications.should include(app)
+    stub_version_check(app.path)
+    TestRun.start
+    app_version = ApplicationVersion.find(:first)
+    TestRun.find(:first).application_versions.should include(app_version)
   end
   
   it "should not assign inactive apps to the test run" do
-    pending
-    active = create_application(:name => "Active")
     inactive = create_application(:name => "Inactive", :active => false)
-    TestRun.start(successful_command)
-    TestRun.find(:first).applications.should_not include(inactive)
-  end
-  
-  it "should record successful test run" do
-    pending
-    create_application
-    TestRun.start(successful_command)
-    
+    TestRun.start
+    TestRun.find(:first).application_versions.should be_empty
   end
 end

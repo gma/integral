@@ -76,4 +76,10 @@ end
 class TestRun < ActiveRecord::Base
   has_many :application_version_test_runs
   has_many :application_versions, :through => :application_version_test_runs
+  
+  def self.start
+    run = new
+    run.application_versions << ApplicationVersion.check_current_versions(:test)
+    run.save!
+  end
 end
