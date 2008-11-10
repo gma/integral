@@ -3,6 +3,7 @@ class CreateApplicationVersions < ActiveRecord::Migration
     create_table :application_versions, :force => true do |t|
       t.integer :application_id, :null => false
       t.string :version, :null => false
+      t.timestamps
     end
   end
 
