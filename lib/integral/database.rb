@@ -44,11 +44,16 @@ class Application < ActiveRecord::Base
   end
   
   def current_version(type)
+    host = Integral::Configuration.server(type)
     command = Integral::Configuration.version_command.
-        gsub("$hostname", Integral::Configuration.server(type)).
+        gsub("$hostname", host).
         gsub("$path", self.path)
+    print "Checking version of #{self.name} on #{host} ... " if ENV["VERBOSE"]
+    $stdout.flush
     fh = IO.popen(command)
-    fh.gets.rstrip
+    version = fh.gets.rstrip
+    puts "ok" if ENV["VERBOSE"]
+    version
   end
 end
 

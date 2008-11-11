@@ -26,7 +26,7 @@ class App < Thor
     end
   end
   
-  desc "add <name> <path>", "add an application to be tracked by integral"
+  desc "add <name> <path>", "add an application to be tested"
   def add(name, path)
     app = Application.create(:name => name, :path => path)
     if app.errors.on(:name)
@@ -67,34 +67,76 @@ class App < Thor
   end
 end
 
+module Colourizer
+  
+  ## These methods were shamelessly stolen from rspec. Sorry rspec.
+  
+  private
+    def colour(text, colour_code)
+      return text unless output_to_tty?
+      "#{colour_code}#{text}\e[0m"
+    end
+
+    def output_to_tty?
+      begin
+        $stdout.tty?
+      rescue NoMethodError
+        false
+      end
+    end
+    
+    def green(text)
+      colour(text, "\e[32m")
+    end
+
+    def red(text)
+      colour(text, "\e[31m")
+    end
+end
+
 class Integration < Thor
-  desc "run", "run the integration tests"
-  def run
-    puts "Running tests here..."
-    exit_status = 0  # should be exit status of an external script
-    exit_status == 0 ? true : false
-    TestRun.start("ruby integration.rb #{Integral::Configuration.server(:test)}")
+  include Colourizer
+  
+  desc "test", "run the integration tests"
+  def test
+    TestRun.start
   end
   
-  desc "latest", "show the results of the last 5 test runs"
-  def latest
+  desc "recent", "show the results of the last 5 test runs"
+  def recent
+    runs = TestRun.find(:all,
+                        :include => :application_versions,
+                        :order => "created_at DESC",
+                        :limit => 5)
+    runs.reverse!
+    puts sprintf("%-40s %s", "Time", "Outcome")
+    puts "-" * 78
+    runs.each do |run|
+      outcome = run.passed ? green("pass") : red("FAIL")
+      puts sprintf("%-40s %s", run.created_at, outcome)
+    end
   end
 end
 
 class Versions < Thor
   desc "test", "show current versions on test server"
+  method_options :verbose => :boolean
   def test
-    _check_server(:test)
+    ENV["VERBOSE"] = "1" if options["verbose"]
+    _show_versions_on_server(:test)
   end
   
   desc "live", "show current versions on live server"
+  method_options :verbose => :boolean
   def live
-    _check_server(:live)
+    ENV["VERBOSE"] = "1" if options["verbose"]
+    _show_versions_on_server(:live)
   end
   
-  def _check_server(type)
+  def _show_versions_on_server(type)
     versions = ApplicationVersion.check_current_versions(type)
     versions.sort! { |a, b| a.application.name <=> b.application.name }
+    puts if ENV["VERBOSE"]
     puts sprintf("%-15s %s", "Application", "Version")
     puts "-" * 78
     versions.each do |version|
