@@ -97,8 +97,8 @@ end
 class Integration < Thor
   include Colourizer
   
-  desc "test", "run the integration tests"
-  def test
+  desc "run", "run the integration tests"
+  def run
     TestRun.start
   end
   
