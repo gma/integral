@@ -82,8 +82,11 @@ describe Application do
     app = create_application
     stub_version_check(app.path)
     IO.should_receive(:popen).with("ssh testhost cat #{app.path}/REVISION")
-
     app.current_version(:test).should == "123"
+  end
+  
+  it "should raise exception if version command fails" do
+    pending
   end
 end
 
