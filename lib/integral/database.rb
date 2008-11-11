@@ -4,7 +4,8 @@ require "logger"
 module Integral
   module Database
     def self.disable_logging
-      ActiveRecord::Base.logger = Logger.new("/dev/null")
+      log_file = File.join(INTEGRAL_ROOT, "log", "#{INTEGRAL_ENV}.log")
+      ActiveRecord::Base.logger = Logger.new(log_file)
     end
     
     def self.connect
