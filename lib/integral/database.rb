@@ -2,6 +2,8 @@ require "activerecord"
 require "logger"
 
 module Integral
+  class Error < RuntimeError; end
+  
   module Database
     def self.disable_logging
       log_file = File.join(INTEGRAL_ROOT, "log", "#{INTEGRAL_ENV}.log")
@@ -63,7 +65,7 @@ class ApplicationVersion < ActiveRecord::Base
     versions = []
     Application.find(:all, :conditions => ["active = ?", true]).each do |app|
       versions << find_or_create_by_application_id_and_version(
-          :application => app, :version => app.current_version(type))
+          app.id, app.current_version(type))
     end
     versions
   end
@@ -74,13 +76,47 @@ class ApplicationVersionTestRun < ActiveRecord::Base
   belongs_to :test_run
 end
 
+class ApplicationNotSpecified < Integral::Error; end
+class TestRunNotFound < Integral::Error; end
+
 class TestRun < ActiveRecord::Base
   has_many :application_version_test_runs
   has_many :application_versions, :through => :application_version_test_runs
   
+  def self.test_command
+    "ruby #{File.expand_path(File.join(INTEGRAL_ROOT, "integrate.rb"))}"
+  end
+  
   def self.start
     run = new
     run.application_versions << ApplicationVersion.check_current_versions(:test)
+    IO.popen(test_command) { |fh| fh.each { |line| puts line } }
+    run.passed = ($?.exitstatus == 0)
     run.save!
   end
+  
+  def self.passed?(versions)
+    test_runs = []
+    versions.each do |name, version|
+      app_version = ApplicationVersion.find(
+          :first,
+          :joins => :application,
+          :include => :test_runs,
+          :conditions => ["name = ? and version = ?", name, version])
+      raise TestRunNotFound if app_version.nil?
+      test_runs << app_version.test_runs
+    end
+    run = test_runs.inject { |x, y| x & y }.first
+    apps_in_run = run.application_versions.map { |av| av.application.name }
+    raise ApplicationNotSpecified if apps_in_run != versions.keys
+    run.passed
+  end
+  
+  private
+    def self.convert_to_application_ids(versions)
+      apps = Application.find(:all,
+                              :conditions => ["name in (?)", versions.keys])
+      apps.map { |app| versions[app.id] = versions.delete(app.name) }
+      versions
+    end
 end

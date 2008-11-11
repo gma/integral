@@ -22,6 +22,16 @@ module Helpers
     app
   end
   
+  def create_two_applications
+    apps = []
+    ["app1", "app2"].each do |name|
+      app = create_application(:name => name, :path => "/path/to/#{name}")
+      stub_version_check(app.path)
+      apps << app
+    end
+    apps
+  end
+  
   def create_version(app, version = "1")
     version = ApplicationVersion.new(:application => app, :version => version)
     version.save!
@@ -29,11 +39,11 @@ module Helpers
   end
   
   def stub_version_check(path)
-    fh = mock(:fh)
-    fh.stub!(:gets).and_return("123\n\n")
     Integral::Configuration.stub!(:version_command).and_return(
         "ssh $hostname cat $path/REVISION")
     Integral::Configuration.stub!(:server).and_return("testhost")
+    fh = mock(:fh)
+    fh.stub!(:gets).and_return("123\n\n")
     IO.stub!(:popen).with("ssh testhost cat #{path}/REVISION").and_return(fh)
   end
 end
@@ -95,57 +105,114 @@ describe ApplicationVersion do
   
   before(:each) do
     destroy_all
+    @app1, @app2 = create_two_applications
   end
   
   it "should create new version object for active applications" do
-    app = create_application
-    stub_version_check(app.path)
     ApplicationVersion.check_current_versions(:test)
-    version = ApplicationVersion.find_by_application_id_and_version(app, "123")
+    version = ApplicationVersion.find_by_application_id_and_version(@app1, "123")
     version.should_not be_nil
   end
   
   it "should not create duplicate versions for an application" do
-    app = create_application
-    stub_version_check(app.path)
     2.times { ApplicationVersion.check_current_versions(:test) }
-    ApplicationVersion.find_all_by_application_id(app).size.should == 1
+    ApplicationVersion.find_all_by_application_id(@app1).size.should == 1
   end
   
   it "should not retrieve current version of inactive applications" do
-    app = create_application(:active => false)
-    IO.should_not_receive(:popen)
+    app = create_application(:active => false, :path => "/inactive")
+    IO.should_not_receive(:popen).with("ssh testhost cat /inactive/REVISION")
     ApplicationVersion.check_current_versions(:test)
   end
   
   it "should return only the current version of each application" do
-    app1 = create_application(:name => "App1")
-    app2 = create_application(:name => "App2")
-    v1 = create_version(app1, "1")
-    v2 = create_version(app1, "2")
-    v3 = create_version(app2, "2")
+    v1 = create_version(@app1, "1")
+    v2 = create_version(@app1, "2")
+    v3 = create_version(@app2, "2")
     ApplicationVersion.find_current.should == [v2, v3]
   end
 end
 
 describe TestRun do
   include Helpers
+
+  def stub_test_run(command)
+    IO.stub!(:popen).with(TestRun.test_command)
+    system(command)  # populate $?.exitstatus correctly
+  end
   
   before(:each) do
     destroy_all
+    @app1, @app2 = create_two_applications
+    @inactive = create_application(:name => "Inactive", :active => false)
+    stub_test_run("true")
   end
   
   it "should assign current version of apps to test run" do
-    app = create_application
-    stub_version_check(app.path)
     TestRun.start
-    app_version = ApplicationVersion.find(:first)
-    TestRun.find(:first).application_versions.should include(app_version)
+    apps = TestRun.find(:first).application_versions.map { |v| v.application }
+    apps.should include(@app1)
+    apps.should include(@app2)
   end
   
   it "should not assign inactive apps to the test run" do
-    inactive = create_application(:name => "Inactive", :active => false)
     TestRun.start
-    TestRun.find(:first).application_versions.should be_empty
+    apps = TestRun.find(:first).application_versions.map { |v| v.application }
+    apps.should_not include(@inactive)
+  end
+  
+  it "should run the test script" do
+    IO.should_receive(:popen).with(TestRun.test_command)
+    TestRun.start
+  end
+  
+  it "should mark the run as passed if tests pass" do
+    stub_test_run("true")
+    TestRun.start
+    TestRun.find(:first).passed.should be_true
+  end
+  
+  it "should mark the run as failed if tests fail" do
+    stub_test_run("false")
+    TestRun.start
+    TestRun.find(:first).passed.should be_false
+  end
+  
+  describe "when checking tested versions" do
+    before(:each) do
+    end
+
+    it "should return true if tests passed" do
+      TestRun.start
+      TestRun.passed?("app1" => "123", "app2" => "123").should be_true
+    end
+    
+    it "should return false if tests failed" do
+      stub_test_run("false")
+      TestRun.start
+      TestRun.passed?("app1" => "123", "app2" => "123").should be_false
+    end
+    
+    it "should raise exception if no run found" do
+      TestRun.start
+      lambda {
+        TestRun.passed?("nosuchapp" => "1")
+      }.should raise_error(TestRunNotFound)
+    end
+    
+    it "should raise exception if application in run not specified" do
+      TestRun.start
+      lambda {
+        TestRun.passed?("app1" => "123")
+      }.should raise_error(ApplicationNotSpecified)
+    end
+    
+    it "should return true if multiple runs match and last one passed" do
+      pending
+    end
+    
+    it "should return false if multiple runs match and last one failed" do
+      pending
+    end
   end
 end
