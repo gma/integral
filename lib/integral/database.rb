@@ -104,8 +104,9 @@ class TestRun < ActiveRecord::Base
     last_run = find_test_runs(versions).sort do |x, y|
       x.created_at <=> y.created_at
     end.last
+    raise TestRunNotFound if last_run.nil?
     apps_in_run = last_run.application_versions.map { |av| av.application.name }
-    raise ApplicationNotSpecified if apps_in_run != versions.keys
+    raise ApplicationNotSpecified if apps_in_run.sort != versions.keys.sort
     last_run.passed
   end
   

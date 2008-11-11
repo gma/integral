@@ -208,10 +208,18 @@ describe TestRun do
       TestRun.passed?(valid_passed_params).should be_false
     end
 
-    it "should raise exception if no run found" do
+    it "should raise exception if application version not found" do
       TestRun.start
       lambda {
         TestRun.passed?("nosuchapp" => "1")
+      }.should raise_error(TestRunNotFound)
+    end
+    
+    it "should raise exception if app versions exist but test not found" do
+      TestRun.start
+      TestRun.destroy_all
+      lambda {
+        TestRun.passed?(valid_passed_params)
       }.should raise_error(TestRunNotFound)
     end
     
