@@ -36,7 +36,7 @@ class App < Thor
     end
   end
   
-  desc "add <name> <path>", "add an application to be tested"
+  desc "add NAME PATH", "add an application to be tested"
   def add(name, path)
     app = Application.create(:name => name, :path => path)
     if app.errors.on(:name)
@@ -46,7 +46,7 @@ class App < Thor
     end
   end
   
-  desc "remove <name>", "remove an application (caution!)"
+  desc "remove NAME", "remove an application (caution!)"
   def remove(name)
     app = Application.find_by_name(name)
     if app
@@ -62,14 +62,14 @@ class App < Thor
     end
   end
   
-  desc "activate <name>", "activate an existing application"
+  desc "activate NAME", "activate an existing application"
   def activate(name)
     app = Application.find_by_name(name)
     app && app.activate!
     list
   end
   
-  desc "deactivate <name>", "deactivate an active application "
+  desc "deactivate NAME", "deactivate an active application "
   def deactivate(name)
     app = Application.find_by_name(name)
     app && app.deactivate!
