@@ -179,20 +179,35 @@ describe TestRun do
   end
   
   describe "when checking tested versions" do
-    before(:each) do
+    def valid_passed_params
+      { "app1" => "123", "app2" => "123" }
     end
-
+    
     it "should return true if tests passed" do
       TestRun.start
-      TestRun.passed?("app1" => "123", "app2" => "123").should be_true
+      TestRun.passed?(valid_passed_params).should be_true
     end
     
     it "should return false if tests failed" do
       stub_test_run("false")
       TestRun.start
-      TestRun.passed?("app1" => "123", "app2" => "123").should be_false
+      TestRun.passed?(valid_passed_params).should be_false
     end
     
+    it "should return true if multiple runs match and last one passed" do
+      TestRun.start
+      stub_test_run("true")
+      TestRun.start
+      TestRun.passed?(valid_passed_params).should be_true
+    end
+    
+    it "should return false if multiple runs match and last one failed" do
+      TestRun.start
+      stub_test_run("false")
+      TestRun.start
+      TestRun.passed?(valid_passed_params).should be_false
+    end
+
     it "should raise exception if no run found" do
       TestRun.start
       lambda {
@@ -202,17 +217,11 @@ describe TestRun do
     
     it "should raise exception if application in run not specified" do
       TestRun.start
+      params = valid_passed_params
+      params.delete("app2")
       lambda {
-        TestRun.passed?("app1" => "123")
+        TestRun.passed?(params)
       }.should raise_error(ApplicationNotSpecified)
-    end
-    
-    it "should return true if multiple runs match and last one passed" do
-      pending
-    end
-    
-    it "should return false if multiple runs match and last one failed" do
-      pending
     end
   end
 end

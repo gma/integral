@@ -96,23 +96,29 @@ class TestRun < ActiveRecord::Base
   end
   
   def self.passed?(versions)
-    test_runs = []
-    versions.each do |name, version|
-      app_version = ApplicationVersion.find(
-          :first,
-          :joins => :application,
-          :include => :test_runs,
-          :conditions => ["name = ? and version = ?", name, version])
-      raise TestRunNotFound if app_version.nil?
-      test_runs << app_version.test_runs
-    end
-    run = test_runs.inject { |x, y| x & y }.first
-    apps_in_run = run.application_versions.map { |av| av.application.name }
+    last_run = find_test_runs(versions).sort do |x, y|
+      x.created_at <=> y.created_at
+    end.last
+    apps_in_run = last_run.application_versions.map { |av| av.application.name }
     raise ApplicationNotSpecified if apps_in_run != versions.keys
-    run.passed
+    last_run.passed
   end
   
   private
+    def self.find_test_runs(versions)
+      test_runs = []
+      versions.each do |name, version|
+        app_version = ApplicationVersion.find(
+            :first,
+            :joins => :application,
+            :include => :test_runs,
+            :conditions => ["name = ? and version = ?", name, version])
+        raise TestRunNotFound if app_version.nil?
+        test_runs << app_version.test_runs
+      end
+      test_runs.inject { |x, y| x & y }  # only the runs that tested every app
+    end
+    
     def self.convert_to_application_ids(versions)
       apps = Application.find(:all,
                               :conditions => ["name in (?)", versions.keys])
