@@ -13,15 +13,50 @@ applications.
 
 == SYNOPSIS:
 
-  FIX (code sample of usage)
+Add the applications that are covered by your tests to the database:
+
+  $ thor db:migrate
+  $ thor app:add first-app /var/apps/first-app/current
+  $ thor app:add another-app /var/apps/another-app/current
+
+Now you just need to:
+
+  1. Write your test script (you just replace integrate.rb).
+  2. Create config/config.yml and refer to your test and live servers.
+
+Then you can launch your integration tests, which should test the interaction between your apps on your test server (an exit code of 0 means all the tests passed, non-zero means they failed):
+
+  $ thor integration:run
+
+Integrate a command such as this into your deployment process (it'll exit with a non-zero exit code if the combination of apps that will be deployed have not been tested):
+
+  $ thor versions:check first-app 123
+
+Run "thor -T" to view all available tasks.
 
 == REQUIREMENTS:
 
-* FIX (list of requirements)
+* Ruby, rubygems, activerecord and thor.
+
+* A relational database (anything supported by activerecord will do).
+
+* Multiple applications installed on both test and live servers. Each app
+  must have a REVISION file that contains the currently deployed version
+  number.
 
 == INSTALL:
 
-* FIX (sudo gem install, anything else)
+Either download the tarball from the github page...
+
+  http://github.com/gma/integral/tree/master
+
+...or clone it with git:
+
+  $ git clone git://github.com/gma/integral.git
+
+See the Wiki for more detailed instructions:
+
+  http://github.com/gma/integral/wikis
 
 == LICENSE:
 
