@@ -12,8 +12,10 @@ Integral::Database.connect
 class Db < Thor
   desc "migrate", "migrate the database"
   def migrate
-    ActiveRecord::Migration.verbose = ENV["VERBOSE"] ? ENV["VERBOSE"] == "true" : true
-    ActiveRecord::Migrator.migrate("db/migrate/", ENV["VERSION"] ? ENV["VERSION"].to_i : nil)
+    ActiveRecord::Migration.verbose = 
+        ENV["VERBOSE"] ? ENV["VERBOSE"] == "true" : true
+    ActiveRecord::Migrator.migrate(
+        "db/migrate/", ENV["VERSION"] ? ENV["VERSION"].to_i : nil)
   end
 end
 
@@ -36,7 +38,7 @@ class App < Thor
     end
   end
   
-  desc "remove <name>", "remove an application (use with caution!)"
+  desc "remove <name>", "remove an application (caution!)"
   def remove(name)
     app = Application.find_by_name(name)
     if app
@@ -119,28 +121,61 @@ class Integration < Thor
 end
 
 class Versions < Thor
+  include Colourizer
+  
   desc "test", "show current versions on test server"
   method_options :verbose => :boolean
   def test
     ENV["VERBOSE"] = "1" if options["verbose"]
-    _show_versions_on_server(:test)
+    show_versions_on_server(:test)
   end
   
   desc "live", "show current versions on live server"
   method_options :verbose => :boolean
   def live
     ENV["VERBOSE"] = "1" if options["verbose"]
-    _show_versions_on_server(:live)
+    show_versions_on_server(:live)
   end
-  
-  def _show_versions_on_server(type)
-    versions = ApplicationVersion.check_current_versions(type)
-    versions.sort! { |a, b| a.application.name <=> b.application.name }
-    puts if ENV["VERBOSE"]
-    puts sprintf("%-15s %s", "Application", "Version")
-    puts "-" * 78
-    versions.each do |version|
-      puts sprintf("%-15s %s", version.application.name, version.version)
+
+  desc "check APP VERSION", "check whether combination is tested"
+  method_options :verbose => :boolean
+  def check(name, version)
+    versions_to_check = check_current_versions(:live).merge(name => version)
+    begin
+      TestRun.passed?(versions_to_check)
+      puts green("Success: This combination of applications has been tested!")
+    rescue TestRunNotFound
+      puts red("ERROR: This combination of applications is untested")
+      puts
+      dump_versions(versions_to_check)
+      exit(1)
     end
   end
+
+  private
+    def version_dict(app_versions)
+      flattened = app_versions.map do |app_version|
+        [app_version.application.name, app_version.version]
+      end.flatten
+      Hash[*flattened]
+    end
+  
+    def check_current_versions(type)
+      app_versions = ApplicationVersion.check_current_versions(type).sort do |a, b|
+        a.application.name <=> b.application.name
+      end
+      version_dict(app_versions)
+    end
+
+    def dump_versions(app_versions)
+      puts sprintf("%-15s %s", "Application", "Version")
+      puts "-" * 78
+      app_versions.each do |name, version|
+        puts sprintf("%-15s %s", name, version)
+      end
+    end
+  
+    def show_versions_on_server(type)
+      dump_versions(check_current_versions(type))
+    end
 end
