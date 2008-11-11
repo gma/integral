@@ -17,6 +17,14 @@ class Db < Thor
     ActiveRecord::Migrator.migrate(
         "db/migrate/", ENV["VERSION"] ? ENV["VERSION"].to_i : nil)
   end
+  
+  desc "init", "create first successful test run"
+  def init
+    run = TestRun.new
+    run.application_versions << ApplicationVersion.check_current_versions(:live)
+    run.passed = true
+    run.save!
+  end
 end
 
 class App < Thor
