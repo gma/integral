@@ -5,7 +5,7 @@ INTEGRAL_ROOT = File.expand_path(File.join(File.dirname(__FILE__), ".."))
 
 require "rubygems"
 
-INTEGRAL_ENV = ENV["INTEGRAL_ENV"] || "development"
+INTEGRAL_ENV = ENV["INTEGRAL_ENV"] || "production"
 
 require "integral/configuration"
 require "integral/database"
