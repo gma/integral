@@ -112,7 +112,7 @@ class Integration < Thor
     TestRun.start
   end
   
-  desc "recent", "show the results of the last 5 test runs"
+  desc "recent", "show results of last 5 runs"
   def recent
     runs = TestRun.find(:all,
                         :include => :application_versions,
@@ -131,14 +131,14 @@ end
 class Versions < Thor
   include Colourizer
   
-  desc "test", "show current versions on test server"
+  desc "staging", "show apps on test server"
   method_options :verbose => :boolean
   def test
     ENV["VERBOSE"] = "1" if options["verbose"]
     show_versions_on_server(:test)
   end
   
-  desc "live", "show current versions on live server"
+  desc "live", "show apps on live server"
   method_options :verbose => :boolean
   def live
     ENV["VERBOSE"] = "1" if options["verbose"]
@@ -149,13 +149,12 @@ class Versions < Thor
   method_options :verbose => :boolean
   def check(name, version)
     versions_to_check = check_current_versions(:live).merge(name => version)
+    name_and_version = "#{name} (version #{version})"
     begin
       TestRun.passed?(versions_to_check)
-      puts green("Success: This combination of applications has been tested!")
+      puts green("Success: deployment of #{name_and_version} has been tested")
     rescue TestRunNotFound
-      puts red("ERROR: This combination of applications is untested")
-      puts
-      dump_versions(versions_to_check)
+      puts red("ERROR: deployment of #{name_and_version} has not been tested")
       exit(1)
     end
   end
