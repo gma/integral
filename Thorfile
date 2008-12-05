@@ -150,16 +150,25 @@ class Versions < Thor
   def check(name, version)
     versions_to_check = check_current_versions(:live).merge(name => version)
     name_and_version = "#{name} (version #{version})"
-    begin
-      TestRun.passed?(versions_to_check)
-      puts green("Success: deployment of #{name_and_version} has been tested")
-    rescue TestRunNotFound
-      puts red("ERROR: deployment of #{name_and_version} has not been tested")
-      exit(1)
+    if TestRun.passed?(versions_to_check)
+      success(name_and_version)
+    else
+      raise TestRunNotFound
     end
+  rescue TestRunNotFound
+    failure(name_and_version)
   end
 
   private
+    def success(name_and_version)
+      puts green("Success: deployment of #{name_and_version} has been tested")
+    end
+    
+    def failure(name_and_version)
+      puts red("ERROR: deployment of #{name_and_version} has not been tested")
+      exit(1)
+    end
+    
     def version_dict(app_versions)
       flattened = app_versions.map do |app_version|
         [app_version.application.name, app_version.version]
