@@ -148,24 +148,20 @@ class Versions < Thor
   desc "check APP VERSION", "check whether combination is tested"
   method_options :verbose => :boolean
   def check(name, version)
-    versions_to_check = check_current_versions(:live).merge(name => version)
-    name_and_version = "#{name} (version #{version})"
-    if TestRun.passed?(versions_to_check)
-      success(name_and_version)
-    else
-      raise TestRunNotFound
-    end
+    versions = check_current_versions(:live).merge(name => version)
+    app_version = "#{name} (version #{version})"
+    TestRun.passed?(versions) ? success(app_version) : failure(app_version)
   rescue TestRunNotFound
-    failure(name_and_version)
+    failure(app_version)
   end
 
   private
-    def success(name_and_version)
-      puts green("Success: deployment of #{name_and_version} has been tested")
+    def success(app_version)
+      puts green("Success: deployment of #{app_version} has been tested")
     end
     
-    def failure(name_and_version)
-      puts red("ERROR: deployment of #{name_and_version} has not been tested")
+    def failure(app_version)
+      puts red("ERROR: deployment of #{app_version} has not been tested")
       exit(1)
     end
     
