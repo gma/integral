@@ -133,7 +133,7 @@ class Versions < Thor
   
   desc "staging", "show apps on test server"
   method_options :verbose => :boolean
-  def test
+  def staging
     ENV["VERBOSE"] = "1" if options["verbose"]
     show_versions_on_server(:test)
   end
