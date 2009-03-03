@@ -104,7 +104,7 @@ module Colourizer
     end
 end
 
-class Integration < Thor
+class Tests < Thor
   include Colourizer
   
   desc "run", "run the integration tests"
